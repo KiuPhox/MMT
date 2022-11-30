@@ -52,10 +52,8 @@ io.on('connection', async (socket) => {
         result.forEach(element => {
             users.push(element);
             if (element.socket_id === socket.id) {
-                console.log("SELECT * FROM (SELECT friends.user_send, friends.user_recieved, friends.status, users.* FROM friends, users WHERE friends.user_send = users.id) A WHERE A.user_recieved = " + element.id);
                 db.query("SELECT * FROM (SELECT friends.user_send, friends.user_recieved, friends.status, users.* FROM friends, users WHERE friends.user_send = users.id) A WHERE A.user_recieved = " + element.id, function (err, result) {
                     socket.emit('load_friends_table', result);
-                    console.log(result);
                 })
             }
         });
@@ -90,6 +88,7 @@ io.on('connection', async (socket) => {
         db.query("UPDATE friends SET status = 1 WHERE user_recieved = " + data.received_id + " AND user_send = " + data.send_id, function (err, result) {
             db.query("SELECT * FROM (SELECT friends.user_send, friends.user_recieved, friends.status, users.* FROM friends, users WHERE friends.user_send = users.id) A WHERE A.user_recieved = " + data.received_id, function (err, result) {
                 socket.emit('load_friends_table', result);
+
             })
         });
         //console.log("UPDATE friends SET status = 1 WHERE user_recieved = " + data.received_id + " AND user_send = " + data.send_id);
@@ -98,6 +97,17 @@ io.on('connection', async (socket) => {
         //     io.to(data.received_socket_id).emit('load_friends_table', result);
         // })
         io.to(data.send_socket_id).emit('notification', data.received_name + " accept your request");
+    });
+
+    socket.on('joining room', data => {
+        db.query("SELECT * FROM users WHERE id = " + decoded.id, function (err, result) {
+            io.emit('chat message', { message: result[0].name + " joined the chat", type: "join" })
+            io.to(socket.id).emit('set_user_name', result[0].name);
+        });
+    });
+
+    socket.on('chat message', data => {
+        socket.broadcast.emit('chat message', { message: data.message, type: "other", name: data.name });         //sending message to all except the sender
     });
 });
 

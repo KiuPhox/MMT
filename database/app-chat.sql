@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 30, 2022 at 02:47 PM
+-- Generation Time: Nov 30, 2022 at 10:27 PM
 -- Server version: 10.4.24-MariaDB
 -- PHP Version: 8.1.6
 
@@ -63,10 +63,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `socket_id`, `name`, `password`, `phone`) VALUES
-(6, 'zWTf7g_SZxXwuCbUAAAR', 'Anh Tuan', '$2a$08$gkbMgg.Y1/tpNAKrBJPOX.wy5ZNb8IgI5ZaJSaVFHV8k7J427iiPm', '0941974458'),
-(7, 'pYJ9GyCfsHhhK4qNAAAT', 'b', '$2a$08$2zTKDVILrL4slJ7L2n.w9eh6Y5.F6jmSmVkSQj8nQQf29DYDtNrp6', '012345678'),
-(8, 'yPaKxvsgQ7XmJdbCAAAV', 'Hoang', '$2a$08$ITp9qJjTpS7VmA8OIU6Oyu5KPJZPmT5dz2IxHbyQvvZqPDWkVywRm', '987654321'),
-(9, 'DplorM9dRwMaRboMAAAX', 'Tot', '$2a$08$lzhjXrRNKU8xVZOcGptoT.DDzIT9P1mTXmHCaseyWd3wbFvvgoBOu', '123123123');
+(6, 'XZrB2nsYLZLs4zEoAAAP', 'Anh Tuan', '$2a$08$gkbMgg.Y1/tpNAKrBJPOX.wy5ZNb8IgI5ZaJSaVFHV8k7J427iiPm', '0941974458'),
+(7, '9GHVsO8-RAimxv0mAAAf', 'b', '$2a$08$2zTKDVILrL4slJ7L2n.w9eh6Y5.F6jmSmVkSQj8nQQf29DYDtNrp6', '012345678'),
+(8, 'DzVLUqkji1qVhavnAAAR', 'Hoang', '$2a$08$ITp9qJjTpS7VmA8OIU6Oyu5KPJZPmT5dz2IxHbyQvvZqPDWkVywRm', '987654321'),
+(9, 'JqDcmC9doh9ivnnFAAAT', 'Tot', '$2a$08$lzhjXrRNKU8xVZOcGptoT.DDzIT9P1mTXmHCaseyWd3wbFvvgoBOu', '123123123');
 
 --
 -- Indexes for dumped tables
