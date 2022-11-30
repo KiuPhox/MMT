@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Chaton</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/auth/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="body-container col">
+                <h1 class="display-6">Người dùng</h1>
+                <table class="table text-center table-striped table-bordered" id="user-table">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">Id</th>
+                            <th scope="col">Tên</th>
+                            <th scope="col">Gửi kết bạn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="body-container col">
+                <h1 class="display-6">Bạn bè</h1>
+                <table class="table text-center table-striped table-bordered" id="friend-table">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">Tên</th>
+                            <th scope="col">Trạng thái</th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3"
+        crossorigin="anonymous"></script>
+    <script src="./socket.io/socket.io.js"></script>
+    <script>
+        const alertPlaceholder = document.getElementById('liveAlertPlaceholder')
+        const user_tbody = document.querySelector("#user-table tbody");
+        const friend_tbody = document.querySelector("#friend-table tbody");
+
+        const alert = (message, type) => {
+            const wrapper = document.createElement('div')
+            wrapper.innerHTML = [
+                `<div style="position: absolute; top: 2rem; right:2rem;" class="alert alert-${type} alert-dismissible" role="alert">`,
+                `   <div>${message}</div>`,
+                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                '</div>'
+            ].join('')
+
+            document.querySelector('body').appendChild(wrapper)
+        }
+
+        var socket = io();
+        var user_id = 0;
+        var user_name = "";
+
+        socket.on('load_users_table', (message) => {
+            user_tbody.innerHTML = "";
+
+            message.forEach(element => {
+                if (element.socket_id != socket.id) {
+                    var user_row = document.createElement("tr");
+                    user_row.innerHTML = `<td>` + element.id + `</td>
+                                    <td>` + element.name + `</td>
+                                    <td><button type="button" onclick="sendFriendResquest(` + element.id + ", '" + element.socket_id + `')" class="btn btn-primary">Send</button></td>`;
+                    user_tbody.appendChild(user_row);
+                }
+                else {
+                    user_id = element.id;
+                    user_name = element.name;
+                }
+            });
+        })
+
+        socket.on('load_friends_table', (message) => {
+            friend_tbody.innerHTML = "";
+
+            console.log("e");
+            message.forEach(element => {
+                var friend_row = document.createElement("tr");
+                friend_row.innerHTML = `<td>` + element.name + `</td>
+                                    <td>` + element.status + `</td>
+                                    <td><button type="button" onclick="acceptFriendResquest(` + element.user_send + ", '" + element.socket_id + `')" class="btn btn-success">Accept</button></td>`;
+                friend_tbody.appendChild(friend_row);
+                console.log(element.id);
+            });
+        })
+
+        function sendFriendResquest(id, socket_id) {
+            socket.emit("friend-request", {
+                send_name: user_name,
+                send_id: user_id,
+                received_socket_id: socket_id,
+                received_id: id
+            });
+        }
+
+        socket.on('notification', (message) => {
+            alert(message, "danger");
+        })
+
+        function acceptFriendResquest(id, socket_id) {
+            socket.emit("accept-request", {
+                send_id: id,
+                send_socket_id: socket_id,
+                received_id: user_id,
+                received_name: user_name
+            });
+        }
+    </script>
+</body>
+
+</html>
