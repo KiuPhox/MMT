@@ -11,11 +11,17 @@ const io = new Server(server)
 const cookieParserIo = require('socket.io-cookie-parser');
 const { promisify } = require("util");
 const jwt = require("jsonwebtoken");
+const e = require("express");
+const siofu = require("socketio-file-upload");
+
+process.env.PWD = process.cwd()
+
+app.use(express.static(process.env.PWD + '/storage'));
 
 io.use(cookieParserIo());
 
 
-
+app.use(siofu.router)
 app.use(express.static("public"));
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json());
@@ -39,7 +45,26 @@ db.connect((err) => {
 app.use('/', require('./routes/pages'));
 app.use('/auth', require('./routes/auth'));
 
+
+
 io.on('connection', async (socket) => {
+
+
+    var uploader = new siofu();
+    uploader.dir = "./storage/";
+    uploader.listen(socket);
+
+    // uploader.on("start", function (event) {
+    //     let oldname = event.file.name.split('.');
+    //     event.file.name = genRandomString(12) + "." + oldname[1];
+    // });
+
+    uploader.on("saved", function (event) {
+        console.log(event.file.name);
+    });
+
+    const users = []
+
     console.log('a user connected');
 
     const decoded = await promisify(jwt.verify)(socket.request.cookies.userSave,
@@ -48,71 +73,48 @@ io.on('connection', async (socket) => {
 
     db.query("UPDATE users SET socket_id = '" + socket.id + "' WHERE id = " + decoded.id);
     db.query("SELECT * FROM users", function (err, result) {
-        users = [];
         result.forEach(element => {
             users.push(element);
-            if (element.socket_id === socket.id) {
-                db.query("SELECT * FROM (SELECT friends.user_send, friends.user_recieved, friends.status, users.* FROM friends, users WHERE friends.user_send = users.id) A WHERE A.user_recieved = " + element.id, function (err, result) {
-                    socket.emit('load_friends_table', result);
-                })
-            }
         });
-
-        io.emit('load_users_table', users);
-    });
-
-
-    socket.on('friend-request', data => {
-
-        db.query("SELECT * FROM friends WHERE user_recieved = " + data.received_id + " AND user_send = " + data.send_id, function (err, result) {
-            if (result.length === 0) {
-
-                db.query("SELECT * FROM friends WHERE user_recieved = " + data.send_id + " AND user_send = " + data.received_id, function (err, result) {
-                    if (result.length === 0) {
-                        db.query("INSERT INTO friends (user_send, user_recieved, status) VALUES ("
-                            + data.send_id + ", " + data.received_id + ", 0)");
-                        console.log("a");
-                        db.query("SELECT * FROM (SELECT friends.user_send, friends.user_recieved, friends.status, users.* FROM friends, users WHERE friends.user_send = users.id) A WHERE A.user_recieved = " + data.received_id, function (err, result) {
-                            io.to(data.received_socket_id).emit('load_friends_table', result);
-
-                        })
-
-                        io.to(data.received_socket_id).emit('notification', data.send_name + " send you a friend request");
-                    }
-                })
-            }
-        })
-    });
-
-    socket.on('accept-request', data => {
-        db.query("UPDATE friends SET status = 1 WHERE user_recieved = " + data.received_id + " AND user_send = " + data.send_id, function (err, result) {
-            db.query("SELECT * FROM (SELECT friends.user_send, friends.user_recieved, friends.status, users.* FROM friends, users WHERE friends.user_send = users.id) A WHERE A.user_recieved = " + data.received_id, function (err, result) {
-                socket.emit('load_friends_table', result);
-
-            })
-        });
-        //console.log("UPDATE friends SET status = 1 WHERE user_recieved = " + data.received_id + " AND user_send = " + data.send_id);
-
-        // connection.query("SELECT * FROM friends WHERE user_recieved = " + data.received_id, function (err, result) {
-        //     io.to(data.received_socket_id).emit('load_friends_table', result);
-        // })
-        io.to(data.send_socket_id).emit('notification', data.received_name + " accept your request");
+        io.emit('load_users_list', users);
     });
 
     socket.on('joining room', data => {
         db.query("SELECT * FROM users WHERE id = " + decoded.id, function (err, result) {
-            io.emit('chat message', { message: result[0].name + " joined the chat", type: "join" })
+            socket.broadcast.emit('chat message', { message: result[0].name + " joined the chat", type: "join" })
             io.to(socket.id).emit('set_user_name', result[0].name);
         });
     });
 
     socket.on('chat message', data => {
-        socket.broadcast.emit('chat message', { message: data.message, type: "other", name: data.name });         //sending message to all except the sender
+        if (data.type === "image") {
+            socket.broadcast.emit('chat message', { message: data.message, type: "image", name: data.name });
+        }
+        else if (data.type === "file") {
+            socket.broadcast.emit('chat message', { message: data.message, type: "file", name: data.name });
+        }
+        else {
+            socket.broadcast.emit('chat message', { message: data.message, type: "other", name: data.name });
+        }
     });
+
+    socket.on('private message', data => {
+        if (data.type === "image") {
+            io.to(data.socket_id).emit('private message', { message: data.message, type: "image", socket_id: socket.id });
+        }
+        else if (data.type === "file") {
+            io.to(data.socket_id).emit('private message', { message: data.message, type: "file", socket_id: socket.id });
+        }
+        else {
+            io.to(data.socket_id).emit('private message', { message: data.message, socket_id: socket.id });
+        }
+
+    });
+
 });
+
+
 
 server.listen(5000, () => {
     console.log('listening on :5000');
-
-
 });

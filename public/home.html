@@ -12,100 +12,112 @@
 </head>
 
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">Chaton</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
-                aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/home">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/auth/logout">Logout</a>
-                    </li>
-                </ul>
+    <div class="layout-wrapper">
+        <div class="chat-leftsidebar">
+            <div class="chat-container">
+                <h5>Chats</h5>
+                <div id="users-list">
+                </div>
             </div>
         </div>
-    </nav>
-    <div class="container mt-4">
-        <div class="row">
-            <div class="body-container col">
-                <h1 class="display-6">Người dùng</h1>
-                <table class="table text-center table-striped table-bordered" id="user-table">
-                    <thead class="table-dark">
-                        <tr>
-                            <th scope="col">Id</th>
-                            <th scope="col">Tên</th>
-                            <th scope="col">Gửi kết bạn</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+        <div id="file_drop" class="main-chat">
+            <div class="top-container">
+                <h2 id="top-header">Global</h2>
             </div>
-            <div class="body-container col">
-                <h1 class="display-6">Bạn bè</h1>
-                <table class="table text-center table-striped table-bordered" id="friend-table">
-                    <thead class="table-dark">
-                        <tr>
-                            <th scope="col">Tên</th>
-                            <th scope="col">Trạng thái</th>
-                            <th scope="col"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+            <div id="chat-container">
             </div>
-        </div>
-    </div>
+            <div class="send-container">
+                <div class="image-upload">
+                    <label for="siofu_input">
+                        <img src="https://cdn-icons-png.flaticon.com/512/685/685686.png" />
+                    </label>
 
-    <div class="container">
-        <a href="global.html">
-            <h1 class="display-6">Phòng chat</h1>
-        </a>
+                    <input id="siofu_input" type="file" />
+                </div>
+                <input id="chat-message" type="text" placeholder="Aa">
+                <button id="send-btn">Gửi</button>
+            </div>
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3"
         crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script src="./socket.io/socket.io.js"></script>
+    <script src="/siofu/client.js"></script>
     <script>
         const alertPlaceholder = document.getElementById('liveAlertPlaceholder')
-        const user_tbody = document.querySelector("#user-table tbody");
-        const friend_tbody = document.querySelector("#friend-table tbody");
-
-        const alert = (message, type) => {
-            const wrapper = document.createElement('div')
-            wrapper.innerHTML = [
-                `<div style="position: absolute; top: 2rem; right:2rem;" class="alert alert-${type} alert-dismissible" role="alert">`,
-                `   <div>${message}</div>`,
-                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
-                '</div>'
-            ].join('')
-
-            document.querySelector('body').appendChild(wrapper)
-        }
+        const users_list = document.getElementById("users-list");
 
         var socket = io();
         var user_id = 0;
         var user_name = "";
+        var socket = io.connect();
+        var uploader = new SocketIOFileUpload(socket);
 
-        socket.on('load_users_table', (message) => {
-            user_tbody.innerHTML = "";
+        uploader.listenOnInput(document.getElementById("siofu_input"));
+        uploader.listenOnDrop(document.getElementById("file_drop"));
+
+        function genRandomString(length) {
+            var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            var charLength = chars.length;
+            var result = '';
+            for (var i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * charLength));
+            }
+            return result;
+        }
+
+        uploader.addEventListener("complete", function (event) {
+            var message = document.createElement("div");
+            message.classList.add("this-chat")
+            if (event.file.name.split(".")[1] == "png" || event.file.name.split(".")[1] == "jpg") {
+                if (selectedUser.socket_id === 0) {
+                    socket.emit("chat message", { message: event.file.name, type: "image", name: name })
+                }
+                else {
+                    socket.emit("private message", { message: event.file.name, type: "image", socket_id: selectedUser.socket_id })
+                }
+                message.innerHTML = `<img src="` + event.file.name + `">`;
+
+            }
+            else {
+                if (selectedUser.socket_id === 0) {
+                    socket.emit("chat message", { message: event.file.name, type: "file", name: name })
+                }
+                else {
+                    socket.emit("private message", { message: event.file.name, type: "file", socket_id: selectedUser.socket_id })
+                }
+                message.innerHTML = `<span><a download = "" href="` + event.file.name + `">` + event.file.name + `</a></span>`
+            }
+            $("#chat-message").val("");
+            $('#chat-container').append(message)
+            $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+        });
+
+        let users = [];
+
+        socket.emit('joining room');
+
+        socket.on('load_users_list', (message) => {
+            users = [];
+            users_list.innerHTML = "";
+
+            var user_item = document.createElement("div");
+            user_item.innerHTML = `<p>Global</p>`
+            user_item.classList.add("user-item");
+            user_item.classList.add("check");
+            user_item.setAttribute("onclick", "selectUser(this, 0, 0, 'Global')")
+            users_list.appendChild(user_item);
 
             message.forEach(element => {
                 if (element.socket_id != socket.id) {
-                    var user_row = document.createElement("tr");
-                    user_row.innerHTML = `<td>` + element.id + `</td>
-                                    <td>` + element.name + `</td>
-                                    <td><button type="button" onclick="sendFriendResquest(` + element.id + ", '" + element.socket_id + `')" class="btn btn-primary">Send</button></td>`;
-                    user_tbody.appendChild(user_row);
+                    users.push(element);
+                    var user_item = document.createElement("div");
+                    user_item.innerHTML = `<p>` + element.name + `</p>`
+                    user_item.classList.add("user-item");
+                    user_item.setAttribute("onclick", "selectUser(this, " + element.id + ",'" + element.socket_id + "', '" + element.name + "')")
+                    users_list.appendChild(user_item);
                 }
                 else {
                     user_id = element.id;
@@ -114,41 +126,163 @@
             });
         })
 
-        socket.on('load_friends_table', (message) => {
-            friend_tbody.innerHTML = "";
+        let selectedUser = { id: 0, socket_id: 0 };
+        let storeMessages = [];
 
-            console.log("e");
-            message.forEach(element => {
-                var friend_row = document.createElement("tr");
-                friend_row.innerHTML = `<td>` + element.name + `</td>
-                                    <td>` + element.status + `</td>
-                                    <td><button type="button" onclick="acceptFriendResquest(` + element.user_send + ", '" + element.socket_id + `')" class="btn btn-success">Accept</button></td>`;
-                friend_tbody.appendChild(friend_row);
-                console.log(element.id);
-            });
-        })
+        function selectUser(e, id, socket_id, name) {
 
-        function sendFriendResquest(id, socket_id) {
-            socket.emit("friend-request", {
-                send_name: user_name,
-                send_id: user_id,
-                received_socket_id: socket_id,
-                received_id: id
-            });
+            $("#top-header").text(name)
+
+            document.querySelectorAll(".user-item").forEach(element => element.classList.remove("check"))
+            e.classList.add("check")
+            if (name === "Global") {
+                selectedUser = { id: 0, socket_id: 0 };
+                if (storeMessages[id]) {
+                    $("#chat-container").html(storeMessages[id]);
+                } else {
+                    $("#chat-container").html("");
+                }
+            } else {
+                storeMessages[selectedUser.id] = $('#chat-container').html();
+                console.log(storeMessages);
+                selectedUser = { id: id, socket_id: socket_id };
+                if (storeMessages[id]) {
+                    $("#chat-container").html(storeMessages[id]);
+                } else {
+                    $("#chat-container").html("");
+                }
+            }
         }
 
-        socket.on('notification', (message) => {
-            alert(message, "danger");
+        $("#send-btn").click(function () {
+            if (selectedUser.socket_id === 0) {
+                if ($.trim($("#chat-message").val()) != "") {
+                    socket.emit("chat message", { message: $("#chat-message").val(), name: name })
+                    var message = document.createElement("div");
+                    message.classList.add("this-chat")
+                    message.innerHTML = "<span>" + $("#chat-message").val() + "</span>";
+                    $("#chat-message").val("");
+                    $('#chat-container').append(message)
+                    $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+                } else {
+                    $("#chat-message").val("");
+                }
+            }
+            else {
+                if ($.trim($("#chat-message").val()) != "") {
+                    socket.emit("private message", { message: $("#chat-message").val(), socket_id: selectedUser.socket_id })
+
+
+
+                    var message = document.createElement("div");
+                    message.classList.add("this-chat")
+                    message.innerHTML = "<span>" + $("#chat-message").val() + "</span>";
+                    $("#chat-message").val("");
+                    $('#chat-container').append(message)
+                    $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+
+                } else {
+                    $("#chat-message").val("");
+                }
+            }
+        });
+
+        $("#chat-message").keypress(function (event) {
+            if (event.which == 13) {
+                if (selectedUser.socket_id === 0) {
+                    if ($.trim($("#chat-message").val()) != "") {
+                        socket.emit("chat message", { message: $("#chat-message").val(), name: name })
+                        var message = document.createElement("div");
+                        message.classList.add("this-chat")
+                        message.innerHTML = "<span>" + $("#chat-message").val() + "</span>";
+                        $("#chat-message").val("");
+                        $('#chat-container').append(message)
+                        $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+                    } else {
+                        $("#chat-message").val("");
+                    }
+                }
+                else {
+                    if ($.trim($("#chat-message").val()) != "") {
+                        console.log($('#chat-container').html());
+
+
+                        socket.emit("private message", { message: $("#chat-message").val(), socket_id: selectedUser.socket_id })
+                        var message = document.createElement("div");
+                        message.classList.add("this-chat")
+                        message.innerHTML = "<span>" + $("#chat-message").val() + "</span>";
+                        $("#chat-message").val("");
+                        $('#chat-container').append(message)
+                        $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+                    } else {
+                        $("#chat-message").val("");
+                    }
+                }
+            }
+        });
+
+        var last_p = "";
+
+        socket.on('chat message', function (msg) {
+            if (selectedUser.socket_id === 0) {
+                var message = document.createElement("div");
+                message.classList.add("other-chat")
+                if (msg.type === "join") {
+                    $('#chat-container').append($('<div>').text(msg.message).addClass("join-noti"));
+                } else if (msg.type === "other") {
+
+                    if ($('#chat-container div:last-child').hasClass("other-chat") && last_p == msg.name) {
+                        message.innerHTML = "<span>" + msg.message + "</span>";
+                    }
+                    else {
+                        message.innerHTML = "<p>" + msg.name + "</p>" + "<span>" + msg.message + "</span>";
+                        last_p = msg.name;
+                    }
+                    $('#chat-container').append(message)
+                } else if (msg.type === "image") {
+                    if ($('#chat-container div:last-child').hasClass("other-chat") && last_p == msg.name) {
+                        message.innerHTML = `<img src="` + msg.message + `">`;
+                    }
+                    else {
+                        message.innerHTML = "<p>" + msg.name + "</p>" + `<img src="` + msg.message + `">`;
+                        last_p = msg.name;
+                    }
+                    $('#chat-container').append(message)
+                } else if (msg.type === "file") {
+                    if ($('#chat-container div:last-child').hasClass("other-chat") && last_p == msg.name) {
+                        message.innerHTML = `<span><a download = "" href="` + msg.message + `">` + msg.message + `</a></span>`
+                    }
+                    else {
+                        message.innerHTML = "<p>" + msg.name + "</p>" + `<span><a download = "" href="` + msg.message + `">` + msg.message + `</a></span>`
+                        last_p = msg.name;
+                    }
+                    $('#chat-container').append(message)
+                }
+                $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+            }
+
+        });
+
+        socket.on('private message', function (msg) {
+            if (msg.socket_id === selectedUser.socket_id) {
+                var message = document.createElement("div");
+                message.classList.add("other-chat")
+                if (msg.type === "image") {
+                    message.innerHTML = `<img src="` + msg.message + `">`;
+                } else if (msg.type === "file") {
+                    message.innerHTML = `<span><a download = "" href="` + msg.message + `">` + msg.message + `</a></span>`
+                } else {
+                    message.innerHTML = "<span>" + msg.message + "</span>";
+                }
+                $('#chat-container').append(message)
+                $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+            }
+        });
+
+        socket.on('set_user_name', function (msg) {
+            name = msg;
         })
 
-        function acceptFriendResquest(id, socket_id) {
-            socket.emit("accept-request", {
-                send_id: id,
-                send_socket_id: socket_id,
-                received_id: user_id,
-                received_name: user_name
-            });
-        }
     </script>
 </body>
 
