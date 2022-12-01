@@ -36,11 +36,9 @@
     margin-left: 12px;
 }
 
-#user-list {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+#users-list {
+    height: 90vh;
+    overflow-y: scroll;
 }
 
 .user-item {
